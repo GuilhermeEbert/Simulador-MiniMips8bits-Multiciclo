@@ -3,10 +3,6 @@
 #include<string.h>
 #include <stdint.h>
 
-FILE *mem = NULL;
-char **mem_instr = NULL;
-int m = 256;
-int n = 16;
 
 typedef struct instrucao {
     int opcode;
