@@ -3,7 +3,7 @@
 #include<string.h>
 #include <stdint.h>
 
-
+//struct para busca
 typedef struct instrucao {
     int opcode;
     int rs;
@@ -14,6 +14,7 @@ typedef struct instrucao {
     int  addr;
 } instrucao;
 
+//struct para decodificação
 typedef struct unidade_controle {
     int RegDst;
     int ALUSrc;
