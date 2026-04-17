@@ -1,0 +1,13 @@
+Instruçao:0 |Binario:0100000011000100 |Assembly: addi $3,$0,4
+Instruçao:1 |Binario:0100000100000001 |Assembly: addi $4,$0,1
+Instrucao:2 |Binario:1000000011001001 |Assembly: beq $0,$3,9
+instrucao:3 |Binario:0000011000101000 |Assembly: add $5,$3,$0
+Instruçao:4 |Binario:0100000110000000 |Assembly: addi $6,$0,0
+Instrucao:5 |Binario:1000000101000011 |Assembly: beq $0,$5,3
+instrucao:6 |Binario:0000110100110000 |Assembly: add $6,$6,$4
+Instruçao:7 |Binario:0100101101111111 |Assembly: addi $5,$5,-1
+Instrução:8 |Binario:0010000000000101 |Assembly: jump 5
+instrucao:9 |Binario:0000110000100000 |Assembly: add $4,$6,$0
+Instruçao:10 |Binario:0100011011111111 |Assembly: addi $3,$3,-1
+Instrução:11 |Binario:0010000000000010 |Assembly: jump 2
+Instrucao:12 |Binario:1111010100000000 |Assembly: sw $4,0($2)
