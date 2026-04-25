@@ -587,7 +587,7 @@ void imprimir_mem_dados(int mem[]){
 void gerar_asm(instrucao p,int pc,char bin[])
 {
     FILE *arquivo;
-    arquivo = fopen("assembly.txt","a");
+    arquivo = fopen("assembly.asm","a");
 
     if (!arquivo)
     {
