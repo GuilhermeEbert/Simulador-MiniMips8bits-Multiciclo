@@ -202,8 +202,12 @@ void desalocameminstr(char **mem_instr, int m, int n){
 }
 
 void carregamem (char **mem_instr, int m, int n){
-mem = fopen("memoria1.mem", "r");
-if (mem == NULL){
+  char arq[256];
+  setbuf(stdin, NULL);
+  printf("Digite o nome do arquivo a ser lido: ");
+  scanf("%s", &arq);
+  mem = fopen(arq, "r");
+  if (mem == NULL){
     printf("Erro ao abrir o arquivo!\n");
     return; }
     int c;
@@ -227,7 +231,11 @@ if (mem == NULL){
 }
 
 void carregadat(int *mem_dados){
-    mem = fopen("memoria1.dat", "r");
+  char arq[256];
+  setbuf(stdin, NULL);
+  printf("Digite o nome do arquivo a ser lido: ");
+  scanf("%s", &arq);
+    mem = fopen(arq, "r");
     if (mem == NULL){
         printf("Erro ao abrir o arquivo!\n");
         return;
@@ -238,7 +246,6 @@ void carregadat(int *mem_dados){
         mem_dados[i] = atoi(c);
         i++;
     }
-
     fclose(mem);
     printf("\nMemória de dados carregada");
 }
