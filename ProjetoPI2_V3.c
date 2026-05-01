@@ -58,7 +58,7 @@ int mux_jump(int sinal_jump,int entrada1,int entrada2);
 int somador(int entrada1,int entrada2);
 instrucao busca (char *bin, char **mem_instr, int pc);
 controle sinais_controle(instrucao i, metricas *m, char *ultimaInst);
-void executar(instrucao i, controle c, int *pc);
+void executar(instrucao i, controle c, int *pc, int *regA, int *regB, int *regDadoULA);
 int ula(int op1, int op2, controle c, int *overflow,int *zero);//adicionei o zero na função da ula que vai ser utilizado para o beq
 int lwsw(int operacao, int endereco, int dado);
 int sign_extend6to8(int imm);
@@ -73,17 +73,12 @@ void reduzir_metricas(metricas *m, char ultimaInst);
 
 int main() {
     FILE *mem = NULL;
-    char **mem_instr = NULL;
-    char ultimainst = 0;
-    int m = 256;
-    int n = 16;
-    int escolha=1,pc=0;
-    char bin[17];
-    instrucao i;
+    char **mem_instr=NULL, ultimainst = 0, bin[17];
+    int m = 256, n = 16, escolha=1, pc=0, temp_pc=0, regA, regB, regSaidaULA, regDadoMemoria;
+    instrucao i, regInstr;
     controle c;
     metricas metricas = {0};
     mem_instr = criameminstr(m, n);
-    int temp_pc=0;
     
     printf("\n\nMenu de opcoes do programa");
     do { printf("\n\n[1] Carregar memoria de instrucao");
@@ -143,9 +138,10 @@ int main() {
          break;
          case 8:
           do{i = busca(bin, mem_instr, pc);
+            regInstr = i;
            c = sinais_controle(i, &metricas, &ultimainst);
           int old = pc;
-          executar(i, c, &pc);
+          executar(i, c, &pc, &regA, &regB, &regSaidaULA);
         if(pc == old){
           pc++;
         }
@@ -159,8 +155,9 @@ int main() {
             oldreg[k] = registradores[k];}
             oldpc = pc;
            i = busca(bin, mem_instr, pc);
+           regInstr = i;
            c = sinais_controle(i, &metricas, &ultimainst);
-          executar(i, c, &pc);
+          executar(i, c, &pc, &regA, &regB, &regSaidaULA);
           printf("Instrução executada!\n");
           printf("PC da proxima instrucao:%d\n",pc);
          break;
@@ -171,6 +168,7 @@ int main() {
             for(int k=0;k<8;k++){
             registradores[k] = oldreg[k];}
             i = busca(bin, mem_instr, pc);
+            regInstr = i;
             reduzir_metricas(&metricas, ultimainst);
            printf("\nPC da proxima instrucao:%d",pc);
            break;
@@ -468,7 +466,7 @@ int ula(int op1, int op2, controle c, int *overflow,int *zero){
     }
 }
 
-void executar(instrucao i, controle c, int *pc){
+void executar(instrucao i, controle c, int *pc, int *regA, int *regB, int *regDadoULA){
     int op1;
     int op2;
     int resultado;
@@ -477,6 +475,10 @@ void executar(instrucao i, controle c, int *pc){
     int resultado_soma_branch=0;
     int overflow;
     int zero;
+
+    *regA = registradores[i.rs];
+    *regB = registradores[i.rt];
+    
     //Extensão de sinal:
     op1=registradores[i.rs];
     i.imm=sign_extend6to8(i.imm);
@@ -488,6 +490,7 @@ void executar(instrucao i, controle c, int *pc){
     }
     // Executa na ULA
     resultado = ula(op1, op2, c, &overflow,&zero);
+    *regDadoULA = resultado;
     if(overflow){
     printf("Overflow!\n");
     return ;
