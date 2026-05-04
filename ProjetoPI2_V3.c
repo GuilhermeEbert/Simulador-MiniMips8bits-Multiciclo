@@ -199,7 +199,7 @@ int main() {
             oldreg[k] = registradores[k];}
             oldpc = pc;
            i = busca(bin, memu, pc);
-           c = sinais_controle(i, &metricas);
+          // c = sinais_controle(i, &metricas);
           executar(i, c, &pc);
           adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT);
           printf("Instrução executada!\n");
