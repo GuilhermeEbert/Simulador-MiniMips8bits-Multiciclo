@@ -363,37 +363,37 @@ void imprimir_instrucao(instrucao p) {
         switch (p.funct)
         {
         case 0:
-            printf("|Assembly: add $%d,$%d,$%d\n",p.rd,p.rs,p.rt);
+            printf("|Assembly: add $%d,$%d,$%d",p.rd,p.rs,p.rt);
             break;
 
         case 2:
-            printf("|Assembly: sub $%d,$%d,$%d\n",p.rd,p.rs,p.rt);
+            printf("|Assembly: sub $%d,$%d,$%d",p.rd,p.rs,p.rt);
             break;
         }
         break;
 
     case 2:
-        printf("|Assembly: jump %d\n",p.addr);
+        printf("|Assembly: jump %d",p.addr);
         break;
 
     case 4:
         p.imm=sign_extend6to8(p.imm);
-        printf("|Assembly: addi $%d,$%d,%d\n",p.rt,p.rs,p.imm);
+        printf("|Assembly: addi $%d,$%d,%d",p.rt,p.rs,p.imm);
         break;
 
     case 8:
         p.imm=sign_extend6to8(p.imm);
-        printf("|Assembly: beq $%d,$%d,%d\n",p.rs,p.rt,p.imm);
+        printf("|Assembly: beq $%d,$%d,%d",p.rs,p.rt,p.imm);
         break;
 
     case 11:
         p.imm=sign_extend6to8(p.imm);
-        printf("|Assembly: lw $%d,%d($%d)\n",p.rt,p.imm,p.rs);
+        printf("|Assembly: lw $%d,%d($%d)",p.rt,p.imm,p.rs);
         break;
 
     case 15:
         p.imm=sign_extend6to8(p.imm);
-        printf("|Assembly: sw $%d,%d($%d)\n",p.rt,p.imm,p.rs);
+        printf("|Assembly: sw $%d,%d($%d)",p.rt,p.imm,p.rs);
         break;
 
     default:
@@ -743,7 +743,6 @@ void imprimir_memoria(char memu[256][17], int m, int n, char* bin)
 
     printf("+---------+------------------+------------------------------+\n");
 
-
     // ================= DADOS =================
     printf("\n================ MEMORIA DE DADOS ================\n");
 
@@ -756,7 +755,7 @@ void imprimir_memoria(char memu[256][17], int m, int n, char* bin)
         printf("| %7d | ", k);
 
         if (memu[k][0] == '\0') {
-            printf("                  | %8d |\n", 0);
+            printf("                 | %8d |\n", 0);
             continue;
         }
 
