@@ -97,10 +97,11 @@ int mux_operandoA_ULA(controle c,int entrada1,int entrada2);
 int mux_operandoB_ULA(controle c,int entrada1,int entrada2,int entrada3);
 int mux_fontePC(controle c,int entrada1,int entrada2,int entrada3);
 controle sinais_controle_multiclo(int estado_atual);
-void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char RegIR[17]);
-void etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_aluout,int banco_reg[],int *reg_tempA,int *reg_tempB,int pc);
-void etapa_execucao_tipoR(int *estado_atual,int reg_tempA,int reg_tempB,int *Reg_aluout);
-void etapa_termino_tipoR(int *estado_atual,int Reg_aluout,char RegIR[17],int banco_reg[]);
+void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char RegIR[17],int *etapa);
+instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_aluout,int banco_reg[],int *reg_tempA,int *reg_tempB,int pc,int *etapa);
+void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode);
+void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int Reg_tempB,int Reg_tempA,int RD,char mem[256][17],int registradores[8],int *MDR,int pc,int extensao_sinal,int opcode,int rt);
+void quinto_estagio_multiciclo(int *estado_atual,int *etapa,int MDR,int Reg_aluout,int rd,int rt,int registradores[8]);
 void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int pc, int Reg_tempA, int Reg_tempB, int Reg_dados, int Reg_aluOUT);
 void voltarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int *pc, int *Reg_tempA, int *Reg_tempB, int *Reg_dados, int *Reg_aluOUT);
 void esvaziarPilha (descritorPilha *descritor);
@@ -112,7 +113,7 @@ int main() {
     char **mem_instr = NULL;
     int m = 256;
     int n = 17;
-    int escolha=1,pc=0,estado_atual=0,etapa=0;
+    int escolha=1,pc=0,estado_atual=0,etapa=1;
     char bin[17];
     int Reg_tempA=0;
     int Reg_tempB=0;
@@ -149,31 +150,44 @@ int main() {
          case 2: 
             //O GURIS EU COLOQUEI ISSO PORQUE COMEÇAR ALI NO CASE 9 EU ACHEI MEIO COMPLICADO PORQUE é MUITA COISA
             //ENTAO VOU FAZER PRIMEIRO AQUI
-            switch (estado_atual)
+            switch (etapa)
             {
-            case 0:
-                etapa_busca_multiciclo(&estado_atual,memu,&pc,RegIR);
-                printf("\nEstado atual:%d",estado_atual);
-                printf("\nAtual valor pc:%d",pc);
-                printf("\nproximo estado:%d",estado_atual);
-                break;
             case 1:
+                printf("\nEstado atual:%d",estado_atual);
+                printf("\nEstagio atual:%d",etapa);
+                
+                etapa_busca_multiciclo(&estado_atual,memu,&pc,RegIR,&etapa);
+                printf("\nEstado prpximo:%d",estado_atual);
+                printf("\nEstagio proximo:%d",etapa);
+                printf("\nAtual valor pc:%d",pc);
+                
+                break;
+            case 2:
                 printf("\nEtapa de decodificação");
-                etapa_decodificacao_multiciclo(&estado_atual,RegIR,&Reg_aluOUT,registradores,&Reg_tempA,&Reg_tempB,pc);
+                printf("\nEstado atual:%d",estado_atual);
+                printf("\nEstagio atual:%d",etapa);
+                i=etapa_decodificacao_multiciclo(&estado_atual,RegIR,&Reg_aluOUT,registradores,&Reg_tempA,&Reg_tempB,pc,&etapa);
                 printf("\nproximo estado:%d",estado_atual);
+                printf("\nVALOR DO REGISTRADOR SAIDA ULA:%d",Reg_aluOUT);
+                printf("\nEstagio proximo:%d",etapa);
                 break;
 
-            case 7:
-                printf("\nEtapa de execução de uma instrução do tipo R!");
-                etapa_execucao_tipoR(&estado_atual,Reg_tempA,Reg_tempB,&Reg_aluOUT);
-                printf("\nvalor do registrador saida ula:%d",Reg_aluOUT);
-                printf("\nproximo estado:%d",estado_atual);
+            case 3:
+                printf("\nEstado atual:%d",estado_atual);
+                printf("\nEstagio atual:%d",etapa);
+                terceiro_estagio_multiciclo(&estado_atual,&etapa,Reg_tempA,Reg_tempB,&Reg_aluOUT,i.imm,i.addr,&pc,i.opcode);
+                printf("\nValor atual do pc:%d",pc);
+                printf("\nValor do registrador ula saida:%d",Reg_aluOUT);
                 break;
-            case 8:
-                printf("\nEtapa final do tipo R ");
-                etapa_termino_tipoR(&estado_atual,Reg_aluOUT,RegIR,registradores);
-                printf("\nproximo estado:%d",estado_atual);
-            
+            case 4:
+                printf("\nEstagio %d multiciclo",etapa);
+                printf("\nEstado:%d",estado_atual);
+                quarto_estagio_multiciclo(&estado_atual,&etapa,&Reg_aluOUT,Reg_tempB,Reg_tempA,i.rd,memu,registradores,&Reg_dados,pc,i.imm,i.opcode,i.rt);
+                break;
+            case 5:
+                printf("\nEstagio %d multiciclo",etapa);
+                printf("\nEstado:%d",estado_atual);
+                quinto_estagio_multiciclo(&estado_atual,&etapa,Reg_dados,Reg_aluOUT,i.rd,i.rt,registradores);
             default:
                 break;
             }
@@ -237,7 +251,7 @@ void carregamem(char memu[256][17]) {
     }
 
     int addr_inst = 0;
-    int addr_data = 127;
+    int addr_data = 128;
     int modo = 0;
 
     char aux[32];
@@ -256,7 +270,7 @@ void carregamem(char memu[256][17]) {
 
         if (modo == 0) {
             // instruções (0–127)
-            if (addr_inst < 128) {
+            if (addr_inst <128) {
                 strcpy(memu[addr_inst], aux);
                 addr_inst++;
             }
@@ -407,8 +421,10 @@ int ula(int op1, int op2, controle c, int *overflow,int *zero){
         case 2: 
          // SUB
             res=op1-op2;
+            printf("\nOP1:%d op2:%d resultado:%d",op1,op2,res);
             if (res>127 || res<-128){
                 *overflow=1;
+                
             }
             if (res==0){
                 *zero=1;
@@ -656,6 +672,17 @@ void complemento2(char bin[])
         }
     }
 }
+int binario_para_decimal(char bin[])
+{
+    int valor = strtol(bin, NULL, 2);
+
+    int bits = strlen(bin);
+    if (bin[0] == '1') {
+        valor -= (1 << bits);
+    }
+
+    return valor;
+}
 void imprimir_memoria(char memu[256][17], int m, int n, char* bin)
 {
     int k = 0, j = 0;
@@ -667,7 +694,7 @@ void imprimir_memoria(char memu[256][17], int m, int n, char* bin)
     printf("| End     | Binario          | Assembly                     |\n");
     printf("+---------+------------------+------------------------------+\n");
 
-    for (k = 0; k < 128 && k < m; k++) {
+    for (k = 0; k <=127 && k < m; k++) {
 
         printf("| %7d | ", k);
 
@@ -713,9 +740,9 @@ void imprimir_memoria(char memu[256][17], int m, int n, char* bin)
             printf("%c", memu[k][j]);
         }
 
-        unsigned int valor = strtoul(memu[k], NULL, 2);
+        int valor = binario_para_decimal(memu[k]);
 
-        printf(" | %8u |\n", valor);
+        printf(" | %8d |\n", valor);
     }
 
     printf("+---------+------------------+----------+\n");
@@ -753,12 +780,15 @@ controle sinais_controle_multiclo(int estado_atual)
         c.ula_fonteA=1;
         c.ula_fonteB=2;
         c.ALUOp=0;
+        c.PCwrite=0;
+        c.Branch=0;
         return c;
     case 3:
         c.MemWrite=0;
         c.IouD=1;
         c.ula_fonteA=1;
         c.ula_fonteB=2;
+        c.RegWrite=0;
         return c;
     case 4:
         c.RegWrite=1;
@@ -772,6 +802,7 @@ controle sinais_controle_multiclo(int estado_atual)
         c.IouD=1;
         c.ula_fonteA=1;
         c.ula_fonteB=2;
+        c.RegWrite=0;
         return c;
     case 6:
         c.MemWrite=0;
@@ -798,7 +829,7 @@ controle sinais_controle_multiclo(int estado_atual)
         c.PCwrite=0;
         c.RegWrite=1;
         c.origPC=0;
-        c.MemRead=0;
+        c.MemWrite=0;
         c.Irwrite=0;
         return c;
     case 9:
@@ -919,7 +950,7 @@ int mux_RegDst(controle c,int entrada1,int entrada2)
         break;
     }
 }
-void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char RegIR[17])
+void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char RegIR[17],int *etapa)
 {
     //primeiro passo é os sinais de controle para o estado 0
     int op1=0;
@@ -942,6 +973,7 @@ void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char Re
         printf("\nInstruçãO salva em RI:%s",RegIR);
     }
     //agora iremos decidir os operandos fontes da ula
+    printf("pc:%d",*pc);
     op1=mux_operandoA_ULA(c,*pc,0);
     printf("\nOperando 1 ula:%d",op1);
     //observação a entrada 2 do mux para decidir o primeiro operando fonte é valor vindo dos registradores
@@ -967,8 +999,9 @@ void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char Re
         *pc=saida_muxORIGpc;
     }
     *estado_atual=1;
+    *etapa=2;
 }
-void etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_aluout,int banco_reg[],int *reg_tempA,int *reg_tempB,int pc)
+instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_aluout,int banco_reg[],int *reg_tempA,int *reg_tempB,int pc,int *etapa)
 {
     controle c;
     instrucao i;
@@ -984,13 +1017,15 @@ void etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_al
     printf("\ninstrucao em binario:%s",RegIR);
     imprimir_instrucao(i);
     //agora iremos pegar os valores no registradores e guarda nos registradores temporario
+    printf("\nRegistrador rs:%d valor:%d",i.rs,registradores[i.rs]);
+    printf("\nRegistrador rt:%d valor:%d",i.rt,registradores[i.rt]);
     *reg_tempA=registradores[i.rs];
     *reg_tempB=registradores[i.rt];
     i.imm=sign_extend6to8(i.imm);
     op1=mux_operandoA_ULA(c,pc,*reg_tempA);
-    printf("\noperando operando 1:%d",op1);
+    printf("\nop1:%d",op1);
     op2=mux_operandoB_ULA(c,*reg_tempB,1,i.imm);
-    printf("\nvalor operando 2:%d",op2);
+    printf("\nop1:%d",op2);
     resultado_ula=ula(op1,op2,c,&overflow,&zero);
     *Reg_aluout=resultado_ula;
     //agora iremos ver o proximo estado dependendo do opcode
@@ -1006,7 +1041,7 @@ void etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_al
         *estado_atual=2;
         break;
     case 15:
-        *estado_atual=15;
+        *estado_atual=2;
         break;
     case 8:
         *estado_atual=9;
@@ -1017,40 +1052,156 @@ void etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_al
     default:
         break;
     }
+    *etapa=3;
+    return i;
 }
-void etapa_execucao_tipoR(int *estado_atual,int reg_tempA,int reg_tempB,int *Reg_aluout)
+void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode)
 {
     controle c;
-    int op1=0,op2=0,resultado_ula=0;
-    int overflow,zero;
+    int saida_mux_ulafonteA;
+    int saida_mux_ulafonteB;
+    int saida_mux_fontepc;
+    int zero=2,overflow;
+    int resultado_ula;
+    int verificação_escrita_pc;
+    printf("\naqui");
+    printf("\nEstado atual:%d",*estado_atual);
+    printf("\nValor no registrador temporario A:%d",Reg_tempA);
+    printf("\nValor no registrador temporario B:%d",Reg_tempB);
+    printf("\nvalor opcode:%d",opcode);
+    printf("\nvalor extensão de sinal:%d",extensao_sinal);
     c=sinais_controle_multiclo(*estado_atual);
-    op1=mux_operandoA_ULA(c,0,reg_tempA);
-    printf("\nvalor operando 1:%d",op1);
-    op2=mux_operandoB_ULA(c,reg_tempB,0,0);
-    printf("\nvalor operando 2:%d",op2);
-    resultado_ula=ula(op1,op2,c,&overflow,&zero);
-    printf("\nvalor da ula:%d",resultado_ula);
+    //primeira parte os mux
+    saida_mux_ulafonteA=mux_operandoA_ULA(c,*pc,Reg_tempA);
+    printf("\nsaida ula fonte a:%d",saida_mux_ulafonteA);
+    saida_mux_ulafonteB=mux_operandoB_ULA(c,Reg_tempB,1,extensao_sinal);
+    printf("\nSaida mux ula fonte b:%d",saida_mux_ulafonteB);
+    resultado_ula=ula(saida_mux_ulafonteA,saida_mux_ulafonteB,c,&overflow,&zero);
+    printf("\nValor registrador saida ula:%d",resultado_ula);
+    //parte da instrução beq ou jump
+    saida_mux_fontepc=mux_fontePC(c,resultado_ula,*Reg_aluout,valor_jump);
+    printf("\nReg aluout:%d",*Reg_aluout);
+    printf("\nJump:%d",valor_jump);
+    printf("\nverificação escrita:%d pc write:%d  branch:%d zero:%d",verificação_escrita_pc,c.PCwrite,c.Branch,zero);
+    printf("\nSaida mux pc:%d",saida_mux_fontepc);
+    verificação_escrita_pc=c.PCwrite |(c.Branch & zero);
+    if (verificação_escrita_pc)
+    {
+        *pc=saida_mux_fontepc;
+    }
     *Reg_aluout=resultado_ula;
-    *estado_atual=8;
+    switch (opcode)
+    {
+    case 0:
+        *estado_atual=8;
+        *etapa=4;
+        break;
+    case 4:
+        *estado_atual=6;
+        *etapa=4;
+        break;
+    case 11:
+        *estado_atual=3;
+        *etapa=4;
+        break;
+    case 15:
+        *estado_atual=5;
+        *etapa=4;
+        break;
+    case 8:
+        *estado_atual=0;
+        *etapa=1;
+        break;
+    case 2:
+        *estado_atual=0;
+        *etapa=1;
+        break;
+    default:
+        break;
+    }
 }
-void etapa_termino_tipoR(int *estado_atual,int Reg_aluout,char RegIR[17],int banco_reg[])
+void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int Reg_tempB,int Reg_tempA,int RD,char mem[256][17],int registradores[8],int *MDR,int pc,int extensao_sinal,int opcode,int rt)
 {
     controle c;
-    instrucao i;
-    int saida_mux_memtoReg=0;
-    int saida_mux_RegDST=0;
     c=sinais_controle_multiclo(*estado_atual);
-    i = decodificar(RegIR);
-    printf("\nregistrador RT:%d",i.rt);
-    printf("\nregistrador RD:%d",i.rd);
-    saida_mux_RegDST=mux_RegDst(c,i.rt,i.rd);
-    printf("\nSaida mux registrador destino:%d",saida_mux_RegDST);
-    saida_mux_memtoReg=mux_memtoreg(c,Reg_aluout,0);//essa parte eu vou arrumar depois
-    printf("\nSaida mux memoria para o registrador:%d",saida_mux_memtoReg);
-    banco_reg[saida_mux_RegDST]=saida_mux_memtoReg;
-    *estado_atual=0;
-}
+    printf("\nEstado atual:%d",*estado_atual);
+    int saida_mux_ulafonteA;
+    int saida_mux_ulafonteB;
+    int saida_mux_memREG;
+    int saida_mux_regDST;
+    int saida_mux_Iod;
+    int zero=0,overflow=0;
+    int resultado_ula;
+    char bin[17];
+    saida_mux_ulafonteA=mux_operandoA_ULA(c,pc,Reg_tempA);
+    saida_mux_ulafonteB=mux_operandoB_ULA(c,Reg_tempB,1,extensao_sinal);
+    resultado_ula=ula(saida_mux_ulafonteA,saida_mux_ulafonteB,c,&overflow,&zero);
+    printf("\nReg write:%d",c.RegWrite);
+    if (c.MemWrite == 0 && c.RegWrite !=1)
+    {
+        saida_mux_Iod=mux_IouD(c,pc,*Reg_aluout);
+        printf("\nAQUI1!");
+        printf("\nEndereco de leitura:%d",saida_mux_Iod);
+        *MDR=binario_para_decimal(mem[128+saida_mux_Iod]);
+    }
+    else if (c.MemWrite)
+    {
+        saida_mux_Iod=mux_IouD(c,pc,*Reg_aluout);
+        printf("\nAQUI2!");
+        printf("\nEndereco de escrita:%d",saida_mux_Iod);
+        conversao(bin,Reg_tempB);
+        strcpy(mem[128+saida_mux_Iod],bin);
+    }
+    if (c.RegWrite)
+    {
+        printf("\nAQUI3!");
+        saida_mux_memREG=mux_memtoreg(c,*Reg_aluout,*MDR);
+        saida_mux_regDST=mux_RegDst(c,rt,RD);
+        registradores[saida_mux_regDST]=saida_mux_memREG;
 
+    }
+    switch (opcode)
+    {
+    case 0:
+        *estado_atual=0;
+        *etapa=1;
+        break;
+    case 4:
+        *estado_atual=0;
+        *etapa=1;
+        break;
+    case 11:
+        *estado_atual=4;
+        *etapa=5;
+        break;
+    case 15:
+        *estado_atual=0;
+        *etapa=1;
+        break;
+    default:
+        break;
+    }
+}
+void quinto_estagio_multiciclo(int *estado_atual,int *etapa,int MDR,int Reg_aluout,int rd,int rt,int registradores[8])
+{
+    controle c;
+    int saida_mux_memREG;
+    int saida_mux_regDST;
+    printf("\nEtapa final lw!");
+    c=sinais_controle_multiclo(*estado_atual);
+    if (c.RegWrite)
+    {
+        saida_mux_memREG=mux_memtoreg(c,Reg_aluout,MDR);
+        printf("\nSaida mux memreg:%d",saida_mux_memREG);
+        saida_mux_regDST=mux_RegDst(c,rt,rd);
+        printf("\nSaida mux regdst:%d",saida_mux_regDST);
+        registradores[saida_mux_regDST]=saida_mux_memREG;
+
+    }
+    *estado_atual=0;
+    *etapa=1;
+    
+}
 void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int pc, int Reg_tempA, int Reg_tempB, int Reg_dados, int Reg_aluOUT) {
 
     nodoPilha *nodo = malloc(sizeof(nodoPilha));
