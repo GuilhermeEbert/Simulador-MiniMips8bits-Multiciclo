@@ -55,7 +55,7 @@ typedef struct descritorPilha {
 } descritorPilha;
 
 
-int registradores[8] = {0};
+int registradores[8] = {0, 3, 5, 0, 3, 0, 5, 7};
 int memoria[256] = {0};
 int oldreg[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 int oldmem[256] = {0};
@@ -96,10 +96,10 @@ int mux_RegDst(controle c,int entrada1,int entrada2);
 int mux_operandoA_ULA(controle c,int entrada1,int entrada2);
 int mux_operandoB_ULA(controle c,int entrada1,int entrada2,int entrada3);
 int mux_fontePC(controle c,int entrada1,int entrada2,int entrada3);
-controle sinais_controle_multiclo(int estado_atual);
+controle sinais_controle_multiclo(int estado_atual, int funct);
 void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char RegIR[17],int *etapa);
 instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_aluout,int banco_reg[],int *reg_tempA,int *reg_tempB,int pc,int *etapa);
-void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode);
+void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode, int funct);
 void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int Reg_tempB,int Reg_tempA,int RD,char mem[256][17],int registradores[8],int *MDR,int pc,int extensao_sinal,int opcode,int rt);
 void quinto_estagio_multiciclo(int *estado_atual,int *etapa,int MDR,int Reg_aluout,int rd,int rt,int registradores[8]);
 void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int pc, int Reg_tempA, int Reg_tempB, int Reg_dados, int Reg_aluOUT);
@@ -110,6 +110,7 @@ void limparBuffer ();
 
 int main() {
     FILE *mem = NULL;
+    int funct = 0;
     char **mem_instr = NULL;
     int m = 256;
     int n = 17;
@@ -167,6 +168,7 @@ int main() {
                 printf("\nEstado atual:%d",estado_atual);
                 printf("\nEstagio atual:%d",etapa);
                 i=etapa_decodificacao_multiciclo(&estado_atual,RegIR,&Reg_aluOUT,registradores,&Reg_tempA,&Reg_tempB,pc,&etapa);
+                funct = i.funct;
                 printf("\nproximo estado:%d",estado_atual);
                 printf("\nVALOR DO REGISTRADOR SAIDA ULA:%d",Reg_aluOUT);
                 printf("\nEstagio proximo:%d",etapa);
@@ -175,7 +177,7 @@ int main() {
             case 3:
                 printf("\nEstado atual:%d",estado_atual);
                 printf("\nEstagio atual:%d",etapa);
-                terceiro_estagio_multiciclo(&estado_atual,&etapa,Reg_tempA,Reg_tempB,&Reg_aluOUT,i.imm,i.addr,&pc,i.opcode);
+                terceiro_estagio_multiciclo(&estado_atual,&etapa,Reg_tempA,Reg_tempB,&Reg_aluOUT,i.imm,i.addr,&pc,i.opcode, funct);
                 printf("\nValor atual do pc:%d",pc);
                 printf("\nValor do registrador ula saida:%d",Reg_aluOUT);
                 break;
@@ -747,7 +749,7 @@ void imprimir_memoria(char memu[256][17], int m, int n, char* bin)
 
     printf("+---------+------------------+----------+\n");
 }
-controle sinais_controle_multiclo(int estado_atual)
+controle sinais_controle_multiclo(int estado_atual, int funct)
 {
     controle c;
     
@@ -816,7 +818,7 @@ controle sinais_controle_multiclo(int estado_atual)
         c.PCwrite=0;
         c.MemWrite=0;
         c.Irwrite=0;
-        c.ALUOp=0;
+        c.ALUOp=funct;
         c.ula_fonteA=1;
         c.ula_fonteB=0;
         c.RegWrite=0;
@@ -964,7 +966,7 @@ void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char Re
     controle c;
     printf("\nEtapa de busca na organização multiclo!");
     printf("\nEstado atual da maquina de estado:%d",*estado_atual);
-    c=sinais_controle_multiclo(*estado_atual);
+    c=sinais_controle_multiclo(*estado_atual, 0);
     if (c.Irwrite==1)
     {
         //Se o sinal de escrita no registrador temporario de instrução de instrução
@@ -1012,7 +1014,7 @@ instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *R
     int zero=0;
     //primeiro iremos gerar os sinais de controle para este estado
     //estado atual é 1 que é o de decodificação
-    c=sinais_controle_multiclo(*estado_atual);
+    c=sinais_controle_multiclo(*estado_atual, 0);
     i = decodificar(RegIR);//decodificação
     printf("\ninstrucao em binario:%s",RegIR);
     imprimir_instrucao(i);
@@ -1033,6 +1035,7 @@ instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *R
     {
     case 0:
         *estado_atual=7;
+        
         break;
     case 4:
         *estado_atual=2;
@@ -1055,7 +1058,7 @@ instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *R
     *etapa=3;
     return i;
 }
-void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode)
+void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode, int funct)
 {
     controle c;
     int saida_mux_ulafonteA;
@@ -1070,7 +1073,7 @@ void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int 
     printf("\nValor no registrador temporario B:%d",Reg_tempB);
     printf("\nvalor opcode:%d",opcode);
     printf("\nvalor extensão de sinal:%d",extensao_sinal);
-    c=sinais_controle_multiclo(*estado_atual);
+    c=sinais_controle_multiclo(*estado_atual, funct);
     //primeira parte os mux
     saida_mux_ulafonteA=mux_operandoA_ULA(c,*pc,Reg_tempA);
     printf("\nsaida ula fonte a:%d",saida_mux_ulafonteA);
@@ -1123,7 +1126,7 @@ void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int 
 void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int Reg_tempB,int Reg_tempA,int RD,char mem[256][17],int registradores[8],int *MDR,int pc,int extensao_sinal,int opcode,int rt)
 {
     controle c;
-    c=sinais_controle_multiclo(*estado_atual);
+    c=sinais_controle_multiclo(*estado_atual, 0);
     printf("\nEstado atual:%d",*estado_atual);
     int saida_mux_ulafonteA;
     int saida_mux_ulafonteB;
@@ -1188,7 +1191,7 @@ void quinto_estagio_multiciclo(int *estado_atual,int *etapa,int MDR,int Reg_aluo
     int saida_mux_memREG;
     int saida_mux_regDST;
     printf("\nEtapa final lw!");
-    c=sinais_controle_multiclo(*estado_atual);
+    c=sinais_controle_multiclo(*estado_atual, 0);
     if (c.RegWrite)
     {
         saida_mux_memREG=mux_memtoreg(c,Reg_aluout,MDR);
