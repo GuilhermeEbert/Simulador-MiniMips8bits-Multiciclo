@@ -55,7 +55,7 @@ typedef struct descritorPilha {
 } descritorPilha;
 
 
-int registradores[8] = {0, 3, 5, 0, 3, 0, 5, 7};
+int registradores[8] = {0};
 int memoria[256] = {0};
 int oldreg[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 int oldmem[256] = {0};
@@ -106,6 +106,8 @@ void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char R
 void voltarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int *pc, int *Reg_tempA, int *Reg_tempB, int *Reg_dados, int *Reg_aluOUT);
 void esvaziarPilha (descritorPilha *descritor);
 void limparBuffer (); 
+void resetar(int *pc, int *estado_atual, int *etapa, char memu[256][17], int registradores[8]);
+
 
 
 int main() {
@@ -138,7 +140,7 @@ int main() {
      printf("\n[6] Salvar .asm e .dat");
      printf("\n[7] Mostrar Estatísticas do programa");
      printf("\n[8] Executar programa(RUN)");
-     printf("\n[9] Executar uma instrução(STEP)");
+     printf("\n[9] Resetar o programa");
      printf("\n[10] Voltar uma instrução");
      printf("\n[0] Encerrar programa");
      printf("\n\nescolha uma opção: ");
@@ -230,19 +232,10 @@ int main() {
           }while(pc<=128);
           printf("\n\n-----PROGRAMA EXECUTADO!-----\n");
          break;
-         case 9:
-            for(int j=0;j<256;j++){
-            oldmem[j] = memoria[j];}
-            for(int k=0;k<8;k++){
-            oldreg[k] = registradores[k];}
-            oldpc = pc;
-           i = busca(bin, memu, pc);
-          // c = sinais_controle(i, &metricas);
-          executar(i, c, &pc);
-          adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT);
-          printf("Instrução executada!\n");
-          printf("PC da proxima instrucao:%d\n",pc);
-         break;
+         case 9: 
+          resetar(&pc,&estado_atual,&etapa,memu, registradores);
+          printf("\nPrograma resetado!\n");
+          break;
          case 10:
             voltarStepPilha(&Pilha, registradores, RegIR, &pc, &Reg_tempA, &Reg_tempB, &Reg_dados, &Reg_aluOUT);
             i = busca(bin, memu, pc);
@@ -1271,4 +1264,27 @@ void esvaziarPilha (descritorPilha *descritor) {
     descritor->topo = NULL;
     descritor->fundo = NULL;
     return;
+}
+
+void resetar(int *pc, int *estado_atual, int *etapa, char memu[256][17], int registradores[8]){
+  *pc=0;
+  *estado_atual=0;
+  *etapa=1;
+  memset(registradores, 0, 8 * sizeof(int));
+  int f;
+  printf("Deseja apagar a meoria?\n1.Sim\n2.Não\n");
+  scanf("%d", &f);
+  switch(f){
+    case 1:
+    memset(memu, 0, 256*17*sizeof(char));
+    printf("Memoria apagada!\n");
+    break;
+    case 2:
+      printf("Memoria mantida!\n");
+      break;
+    default:
+      printf("Opção inavlida, memoria mantida!\n");
+    break;
+  }
+  return;
 }
