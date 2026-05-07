@@ -130,7 +130,7 @@ int main() {
     printf("\n\nMenu de opcoes do programa");
     do { 
      printf("\n\n[1] Carregar memoria de instrucao");
-     printf("\n[2] executar um stap no multiclo");
+     printf("\n[2] executar um clock no multiclo");
      printf("\n[3] Imprimir memoria");
      printf("\n[4] Imprimir banco de registradores");
      printf("\n[5] Imprimir todo simulador");
@@ -970,7 +970,7 @@ void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char Re
         //Se o sinal de escrita no registrador temporario de instrução de instrução
         //estiver ativado iremos escrever nele para isso iremos copiar a instruçao da memoria de instrucao para ele fazendo strcpy
         strcpy(RegIR, memu[*pc]);
-        printf("\nInstruçãO salva em RI:%s",RegIR);
+        printf("\nInstrução salva em RI:%s\n",RegIR);
     }
     //agora iremos decidir os operandos fontes da ula
     printf("pc:%d",*pc);
