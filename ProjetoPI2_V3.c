@@ -207,6 +207,28 @@ int main() {
          case 7:
          break;
          case 8:
+            do{ switch (etapa)
+            {
+            case 1:
+                etapa_busca_multiciclo(&estado_atual,memu,&pc,RegIR,&etapa);
+                break;
+            case 2:
+                i=etapa_decodificacao_multiciclo(&estado_atual,RegIR,&Reg_aluOUT,registradores,&Reg_tempA,&Reg_tempB,pc,&etapa);
+                funct = i.funct;
+                break;
+
+            case 3:
+                terceiro_estagio_multiciclo(&estado_atual,&etapa,Reg_tempA,Reg_tempB,&Reg_aluOUT,i.imm,i.addr,&pc,i.opcode, funct);
+                break;
+            case 4:
+                quarto_estagio_multiciclo(&estado_atual,&etapa,&Reg_aluOUT,Reg_tempB,Reg_tempA,i.rd,memu,registradores,&Reg_dados,pc,i.imm,i.opcode,i.rt);
+                break;
+            case 5:
+                quinto_estagio_multiciclo(&estado_atual,&etapa,Reg_dados,Reg_aluOUT,i.rd,i.rt,registradores);
+                break;
+            }
+          }while(pc<=128);
+          printf("\n\n-----PROGRAMA EXECUTADO!-----\n");
          break;
          case 9:
             for(int j=0;j<256;j++){
