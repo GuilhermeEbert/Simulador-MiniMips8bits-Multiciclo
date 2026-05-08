@@ -76,23 +76,11 @@ void carregamem (char memu[256][17]);
 void imprimir_mem_instr(char memu[256][17], int m, int n, char* bin);
 void imprimir_reg();
 void imprimir_instrucao(instrucao p);
-char **criameminstr(int m, int n);
-void desalocameminstr(char **mem_instr, int m, int n);
-int mux1(controle c, instrucao i);
-int mux_branch(int sinal_branch,int entrada1,int entrada2);
-int mux_jump(int sinal_jump,int entrada1,int entrada2);
-int somador(int entrada1,int entrada2);
 instrucao busca (char *bin, char memu[256][17], int pc);
-controle sinais_controle(instrucao i, metricas *m);
-void executar(instrucao i, controle c, int *pc);
 int ula(int op1, int op2, controle c, int *overflow,int *zero);//adicionei o zero na função da ula que vai ser utilizado para o beq
-int lwsw(int operacao, int endereco, int dado);
 int sign_extend6to8(int imm);
-void imprimir_mem_dados(int mem[]);
 void gerar_asm(instrucao p,int pc,char bin[]);
-void gerar_dat(int mem[]);
 void mostrar_metricas(metricas);
-void carregadat (int *mem_dados);
 void conversao(char bin[], int numero);
 void complemento2(char bin[]);
 void imprimir_memoria(char memu[256][17], int m, int n, char* bin);
@@ -119,7 +107,6 @@ void resetar(int *pc, int *estado_atual, int *etapa, char memu[256][17], int reg
 int main() {
     FILE *mem = NULL;
     int funct = 0;
-    char **mem_instr = NULL;
     int m = 256;
     int n = 17;
     int escolha=1,pc=0,estado_atual=0,etapa=1;
@@ -270,9 +257,6 @@ esvaziarPilha(&Pilha);
 return 0;
 }
 
-
-
-
 void carregamem(char memu[256][17]) {
 
     char arq[256];
@@ -415,7 +399,6 @@ void imprimir_instrucao(instrucao p) {
     }
 }
 
-
 void limparBuffer() {
     char c;
     while ((c = getchar()) != EOF && c !='\n');
@@ -430,13 +413,7 @@ instrucao busca (char *bin, char memu[256][17], int pc){
     imprimir_instrucao(i); return i;
 }
 
-int mux1(controle c, instrucao i){
-    if(c.RegDst == 0){
-        return i.rt; }
-    else if(c.RegDst == 1){
-        return i.rd;
-    } return 0;
-}
+
 
 int ula(int op1, int op2, controle c, int *overflow,int *zero){
     *overflow = 0;
@@ -476,65 +453,9 @@ int ula(int op1, int op2, controle c, int *overflow,int *zero){
     }
 }
 
-void executar(instrucao i, controle c, int *pc){
-    int op1;
-    int op2;
-    int resultado;
-    int destino;
-    int saida_muxBranch=0;
-    int resultado_soma_branch=0;
-    int overflow;
-    int zero;
-    //Extensão de sinal:
-    op1=registradores[i.rs];
-    i.imm=sign_extend6to8(i.imm);
-    // MUX da segunda entrada da ULA (ALUSrc)
-    if(c.ALUSrc == 1){
-        op2 = i.imm;
-    } else {
-        op2 = registradores[i.rt];
-    }
-    // Executa na ULA
-    resultado = ula(op1, op2, c, &overflow,&zero);
-    if(overflow){
-    printf("Overflow!\n");
-    return ;
-  }
-    // MUX do registrador destino
-    destino = mux1(c, i);
-    // Escreve no banco de registradores
-    if(c.RegWrite){
-        registradores[destino] = resultado;
-    }
-    // Branch
-    //primeiro a gente soma o valor do imediato com o valor do pc + 1 para saber valor da entrada 1 do mux branch
-    resultado_soma_branch=somador(i.imm,*pc+1);
-    //agora a gente vai selecionar atraves de um mux qual vai ser caminho selecionado o da soma do branch ou do pc
-    saida_muxBranch=mux_branch(c.Branch & zero,*pc+1,resultado_soma_branch);
-    //agora temos o resultado selecionado pelo mux do branch
-    //agora iremos fazer o mesmo com jump somar com pc +1
-    //agora iremos selecionar o resultado do mux do branch com o resultado da soma do jump e o item selecionado vai virar o pc
-    *pc=mux_jump(c.jump,saida_muxBranch,i.addr);
-    // Sw
-    if(c.MemWrite) {
-        lwsw(1, resultado, i.rt);
-    }
-    // Lw
-    if(c.MemRead) {
-        registradores[destino] = lwsw(2, resultado, i.rt);
-    }
-}
 
-int lwsw(int op, int endereco, int dado) {
-    if (op == 1)
-    {
-        memoria[endereco] = registradores[dado];
-        return 0;
-    }
-    else if (op == 2) {
-        return memoria[endereco];
-    }
-}
+
+
 int sign_extend6to8(int imm)
 {
     if (imm & 0x20)      // verifica bit de sinal (bit 5)
@@ -542,41 +463,7 @@ int sign_extend6to8(int imm)
     else
         return imm;
 }
-int somador(int entrada1,int entrada2)
-{
-    int resultado=0;
-    resultado=entrada1+entrada2;
-    return resultado;
-}
-int mux_branch(int sinal_branch,int entrada1,int entrada2)
-{
-    switch (sinal_branch)
-    {
-    case 0:
-        return entrada1;
-        break;
-    case 1: 
-        return entrada2;
-    default:
-        break;
-    }
-    return 0;
-}
-int mux_jump(int sinal_jump,int entrada1,int entrada2)
-{
-    switch (sinal_jump)
-    {
-    case 0:
-        return entrada1;
-        break;
-    case 1:
-        return entrada2;
-        break;
-    default:
-        break;
-    }
-    return 0;
-}
+
 
 
 
