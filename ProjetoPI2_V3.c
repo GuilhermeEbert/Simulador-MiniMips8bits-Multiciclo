@@ -39,6 +39,7 @@ typedef struct metricas {
     int contInstReg;
     int contInstImm;
     int contInstJump;
+    int contclock;
 } metricas;
 
 typedef struct nodoPilha nodoPilha;
@@ -47,6 +48,11 @@ typedef struct nodoPilha {
     nodoPilha *ant;
     int registradores[8], pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT;
     char RegIR[17], memu[256][17];
+    metricas metricas;
+    int estado_atual;
+    int etapa;
+    instrucao instr;
+    int funct;
 } nodoPilha;
 
 typedef struct descritorPilha {
@@ -97,13 +103,13 @@ int mux_operandoA_ULA(controle c,int entrada1,int entrada2);
 int mux_operandoB_ULA(controle c,int entrada1,int entrada2,int entrada3);
 int mux_fontePC(controle c,int entrada1,int entrada2,int entrada3);
 controle sinais_controle_multiclo(int estado_atual, int funct);
-void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char RegIR[17],int *etapa);
-instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_aluout,int banco_reg[],int *reg_tempA,int *reg_tempB,int pc,int *etapa);
-void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode, int funct);
-void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int Reg_tempB,int Reg_tempA,int RD,char mem[256][17],int registradores[8],int *MDR,int pc,int extensao_sinal,int opcode,int rt);
-void quinto_estagio_multiciclo(int *estado_atual,int *etapa,int MDR,int Reg_aluout,int rd,int rt,int registradores[8]);
-void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int pc, int Reg_tempA, int Reg_tempB, int Reg_dados, int Reg_aluOUT);
-void voltarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int *pc, int *Reg_tempA, int *Reg_tempB, int *Reg_dados, int *Reg_aluOUT);
+void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char RegIR[17],int *etapa, metricas *metricas);
+instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_aluout,int banco_reg[],int *reg_tempA,int *reg_tempB,int pc,int *etapa, metricas *metricas);
+void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode, int funct, metricas *metricas);
+void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int Reg_tempB,int Reg_tempA,int RD,char mem[256][17],int registradores[8],int *MDR,int pc,int extensao_sinal,int opcode,int rt, metricas *metricas);
+void quinto_estagio_multiciclo(int *estado_atual,int *etapa,int MDR,int Reg_aluout,int rd,int rt,int registradores[8], metricas *metricas);
+void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int pc, int Reg_tempA, int Reg_tempB, int Reg_dados, int Reg_aluOUT, metricas metricas, int etapa, int estadoAtual, instrucao instrucao, int funct);
+void voltarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int *pc, int *Reg_tempA, int *Reg_tempB, int *Reg_dados, int *Reg_aluOUT, metricas *metricas, int *etapa, int *estadoAtual, instrucao *instrucao, int *funct);
 void esvaziarPilha (descritorPilha *descritor);
 void limparBuffer (); 
 void resetar(int *pc, int *estado_atual, int *etapa, char memu[256][17], int registradores[8]);
@@ -141,7 +147,7 @@ int main() {
      printf("\n[7] Mostrar Estatísticas do programa");
      printf("\n[8] Executar programa(RUN)");
      printf("\n[9] Resetar o programa");
-     printf("\n[10] Voltar uma instrução");
+     printf("\n[10] Voltar um clock");
      printf("\n[0] Encerrar programa");
      printf("\n\nescolha uma opção: ");
      scanf("%d",&escolha);
@@ -156,20 +162,22 @@ int main() {
             switch (etapa)
             {
             case 1:
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
                 printf("\nEstado atual:%d",estado_atual);
                 printf("\nEstagio atual:%d",etapa);
                 
-                etapa_busca_multiciclo(&estado_atual,memu,&pc,RegIR,&etapa);
+                etapa_busca_multiciclo(&estado_atual,memu,&pc,RegIR,&etapa, &metricas);
                 printf("\nEstado prpximo:%d",estado_atual);
                 printf("\nEstagio proximo:%d",etapa);
                 printf("\nAtual valor pc:%d",pc);
                 
                 break;
             case 2:
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
                 printf("\nEtapa de decodificação");
                 printf("\nEstado atual:%d",estado_atual);
                 printf("\nEstagio atual:%d",etapa);
-                i=etapa_decodificacao_multiciclo(&estado_atual,RegIR,&Reg_aluOUT,registradores,&Reg_tempA,&Reg_tempB,pc,&etapa);
+                i=etapa_decodificacao_multiciclo(&estado_atual,RegIR,&Reg_aluOUT,registradores,&Reg_tempA,&Reg_tempB,pc,&etapa, &metricas);
                 funct = i.funct;
                 printf("\nproximo estado:%d",estado_atual);
                 printf("\nVALOR DO REGISTRADOR SAIDA ULA:%d",Reg_aluOUT);
@@ -177,21 +185,25 @@ int main() {
                 break;
 
             case 3:
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
                 printf("\nEstado atual:%d",estado_atual);
                 printf("\nEstagio atual:%d",etapa);
-                terceiro_estagio_multiciclo(&estado_atual,&etapa,Reg_tempA,Reg_tempB,&Reg_aluOUT,i.imm,i.addr,&pc,i.opcode, funct);
+                terceiro_estagio_multiciclo(&estado_atual,&etapa,Reg_tempA,Reg_tempB,&Reg_aluOUT,i.imm,i.addr,&pc,i.opcode, funct, &metricas);
                 printf("\nValor atual do pc:%d",pc);
                 printf("\nValor do registrador ula saida:%d",Reg_aluOUT);
                 break;
             case 4:
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
                 printf("\nEstagio %d multiciclo",etapa);
                 printf("\nEstado:%d",estado_atual);
-                quarto_estagio_multiciclo(&estado_atual,&etapa,&Reg_aluOUT,Reg_tempB,Reg_tempA,i.rd,memu,registradores,&Reg_dados,pc,i.imm,i.opcode,i.rt);
+                quarto_estagio_multiciclo(&estado_atual,&etapa,&Reg_aluOUT,Reg_tempB,Reg_tempA,i.rd,memu,registradores,&Reg_dados,pc,i.imm,i.opcode,i.rt, &metricas);
                 break;
             case 5:
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
                 printf("\nEstagio %d multiciclo",etapa);
                 printf("\nEstado:%d",estado_atual);
-                quinto_estagio_multiciclo(&estado_atual,&etapa,Reg_dados,Reg_aluOUT,i.rd,i.rt,registradores);
+                quinto_estagio_multiciclo(&estado_atual,&etapa,Reg_dados,Reg_aluOUT,i.rd,i.rt,registradores, &metricas);
+                break;
             default:
                 break;
             }
@@ -207,26 +219,32 @@ int main() {
          case 6:
          break;
          case 7:
+         mostrar_metricas(metricas);
          break;
          case 8:
             do{ switch (etapa)
             {
             case 1:
-                etapa_busca_multiciclo(&estado_atual,memu,&pc,RegIR,&etapa);
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
+                etapa_busca_multiciclo(&estado_atual,memu,&pc,RegIR,&etapa, &metricas);
                 break;
             case 2:
-                i=etapa_decodificacao_multiciclo(&estado_atual,RegIR,&Reg_aluOUT,registradores,&Reg_tempA,&Reg_tempB,pc,&etapa);
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
+                i=etapa_decodificacao_multiciclo(&estado_atual,RegIR,&Reg_aluOUT,registradores,&Reg_tempA,&Reg_tempB,pc,&etapa, &metricas);
                 funct = i.funct;
                 break;
 
             case 3:
-                terceiro_estagio_multiciclo(&estado_atual,&etapa,Reg_tempA,Reg_tempB,&Reg_aluOUT,i.imm,i.addr,&pc,i.opcode, funct);
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
+                terceiro_estagio_multiciclo(&estado_atual,&etapa,Reg_tempA,Reg_tempB,&Reg_aluOUT,i.imm,i.addr,&pc,i.opcode, funct, &metricas);
                 break;
             case 4:
-                quarto_estagio_multiciclo(&estado_atual,&etapa,&Reg_aluOUT,Reg_tempB,Reg_tempA,i.rd,memu,registradores,&Reg_dados,pc,i.imm,i.opcode,i.rt);
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
+                quarto_estagio_multiciclo(&estado_atual,&etapa,&Reg_aluOUT,Reg_tempB,Reg_tempA,i.rd,memu,registradores,&Reg_dados,pc,i.imm,i.opcode,i.rt, &metricas);
                 break;
             case 5:
-                quinto_estagio_multiciclo(&estado_atual,&etapa,Reg_dados,Reg_aluOUT,i.rd,i.rt,registradores);
+                adicionarStepPilha(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
+                quinto_estagio_multiciclo(&estado_atual,&etapa,Reg_dados,Reg_aluOUT,i.rd,i.rt,registradores, &metricas);
                 break;
             }
           }while(pc<=128);
@@ -237,11 +255,12 @@ int main() {
           printf("\nPrograma resetado!\n");
           break;
          case 10:
-            voltarStepPilha(&Pilha, registradores, RegIR, &pc, &Reg_tempA, &Reg_tempB, &Reg_dados, &Reg_aluOUT);
+            voltarStepPilha(&Pilha, registradores, RegIR, &pc, &Reg_tempA, &Reg_tempB, &Reg_dados, &Reg_aluOUT, &metricas, &etapa, &estado_atual, &i, &funct);
             i = busca(bin, memu, pc);
            printf("\nPC da proxima instrucao:%d",pc);
          break;
          default:
+             esvaziarPilha(&Pilha);
              return 0;
              break;
     }
@@ -288,7 +307,8 @@ void carregamem(char memu[256][17]) {
         if (modo == 0) {
             // instruções (0–127)
             if (addr_inst <128) {
-                strcpy(memu[addr_inst], aux);
+                strncpy(memu[addr_inst], aux, 16);
+                memu[addr_inst][16] = '\0';
                 addr_inst++;
             }
         } else {
@@ -618,8 +638,9 @@ void mostrar_metricas(metricas m) {
     "\nInstruções executadas: %i"
     "\nInstruções tipo R executadas: %i"
     "\nInstruções tipo I executadas: %i"
-    "\nInstruções tipo J executadas: %i",
-    m.contInst, m.contInstReg, m.contInstImm, m.contInstJump);
+    "\nInstruções tipo J executadas: %i"
+    "\nNúmero de clocks: %i",    
+    m.contInst, m.contInstReg, m.contInstImm, m.contInstJump, m.contclock);
     return;
 }
 void conversao(char bin[], int numero)
@@ -966,7 +987,7 @@ int mux_RegDst(controle c,int entrada1,int entrada2)
         break;
     }
 }
-void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char RegIR[17],int *etapa)
+void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char RegIR[17],int *etapa, metricas *metricas)
 {
     //primeiro passo é os sinais de controle para o estado 0
     int op1=0;
@@ -978,6 +999,8 @@ void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char Re
     int resultado_and=0;
     int resultado_or=0;
     controle c;
+    metricas->contclock ++;
+
     printf("\nEtapa de busca na organização multiclo!");
     printf("\nEstado atual da maquina de estado:%d",*estado_atual);
     c=sinais_controle_multiclo(*estado_atual, 0);
@@ -1014,10 +1037,11 @@ void etapa_busca_multiciclo(int *estado_atual,char menu[256][17],int *pc,char Re
     {
         *pc=saida_muxORIGpc;
     }
+    
     *estado_atual=1;
     *etapa=2;
 }
-instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_aluout,int banco_reg[],int *reg_tempA,int *reg_tempB,int pc,int *etapa)
+instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *Reg_aluout,int banco_reg[],int *reg_tempA,int *reg_tempB,int pc,int *etapa, metricas *metricas)
 {
     controle c;
     instrucao i;
@@ -1026,6 +1050,8 @@ instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *R
     int resultado_ula=0;
     int overflow=0;
     int zero=0;
+    metricas->contclock ++;
+    
     //primeiro iremos gerar os sinais de controle para este estado
     //estado atual é 1 que é o de decodificação
     c=sinais_controle_multiclo(*estado_atual, 0);
@@ -1072,7 +1098,7 @@ instrucao etapa_decodificacao_multiciclo(int *estado_atual,char RegIR[17],int *R
     *etapa=3;
     return i;
 }
-void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode, int funct)
+void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int Reg_tempB,int *Reg_aluout,int extensao_sinal,int valor_jump,int *pc,int opcode, int funct, metricas *metricas)
 {
     controle c;
     int saida_mux_ulafonteA;
@@ -1081,6 +1107,8 @@ void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int 
     int zero=2,overflow;
     int resultado_ula;
     int verificação_escrita_pc;
+    metricas->contclock ++;
+
     printf("\naqui");
     printf("\nEstado atual:%d",*estado_atual);
     printf("\nValor no registrador temporario A:%d",Reg_tempA);
@@ -1106,6 +1134,14 @@ void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int 
     {
         *pc=saida_mux_fontepc;
     }
+
+    if (*estado_atual == 9) {
+        metricas->contInstImm++;
+    }
+    else if (*estado_atual == 10) {
+        metricas->contInstJump++;
+    }
+
     *Reg_aluout=resultado_ula;
     switch (opcode)
     {
@@ -1136,8 +1172,9 @@ void terceiro_estagio_multiciclo(int *estado_atual,int *etapa,int Reg_tempA,int 
     default:
         break;
     }
+    return;
 }
-void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int Reg_tempB,int Reg_tempA,int RD,char mem[256][17],int registradores[8],int *MDR,int pc,int extensao_sinal,int opcode,int rt)
+void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int Reg_tempB,int Reg_tempA,int RD,char mem[256][17],int registradores[8],int *MDR,int pc,int extensao_sinal,int opcode,int rt, metricas *metricas)
 {
     controle c;
     c=sinais_controle_multiclo(*estado_atual, 0);
@@ -1150,6 +1187,8 @@ void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int 
     int zero=0,overflow=0;
     int resultado_ula;
     char bin[17];
+    metricas->contclock ++;
+
     saida_mux_ulafonteA=mux_operandoA_ULA(c,pc,Reg_tempA);
     saida_mux_ulafonteB=mux_operandoB_ULA(c,Reg_tempB,1,extensao_sinal);
     resultado_ula=ula(saida_mux_ulafonteA,saida_mux_ulafonteB,c,&overflow,&zero);
@@ -1175,7 +1214,8 @@ void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int 
         saida_mux_memREG=mux_memtoreg(c,*Reg_aluout,*MDR);
         saida_mux_regDST=mux_RegDst(c,rt,RD);
         registradores[saida_mux_regDST]=saida_mux_memREG;
-
+        metricas->contInst ++;
+        metricas->contInstReg ++;
     }
     switch (opcode)
     {
@@ -1198,12 +1238,17 @@ void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int 
     default:
         break;
     }
+    return;
 }
-void quinto_estagio_multiciclo(int *estado_atual,int *etapa,int MDR,int Reg_aluout,int rd,int rt,int registradores[8])
+void quinto_estagio_multiciclo(int *estado_atual,int *etapa,int MDR,int Reg_aluout,int rd,int rt,int registradores[8], metricas *metricas)
 {
     controle c;
     int saida_mux_memREG;
     int saida_mux_regDST;
+    metricas->contclock ++;
+    metricas->contInst ++;
+    metricas->contInstImm;
+
     printf("\nEtapa final lw!");
     c=sinais_controle_multiclo(*estado_atual, 0);
     if (c.RegWrite)
@@ -1213,13 +1258,12 @@ void quinto_estagio_multiciclo(int *estado_atual,int *etapa,int MDR,int Reg_aluo
         saida_mux_regDST=mux_RegDst(c,rt,rd);
         printf("\nSaida mux regdst:%d",saida_mux_regDST);
         registradores[saida_mux_regDST]=saida_mux_memREG;
-
     }
     *estado_atual=0;
     *etapa=1;
-    
+    return;
 }
-void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int pc, int Reg_tempA, int Reg_tempB, int Reg_dados, int Reg_aluOUT) {
+void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int pc, int Reg_tempA, int Reg_tempB, int Reg_dados, int Reg_aluOUT, metricas metricas, int etapa, int estadoAtual, instrucao instrucao, int funct) {
 
     nodoPilha *nodo = malloc(sizeof(nodoPilha));
 
@@ -1231,6 +1275,17 @@ void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char R
     nodo->Reg_dados = Reg_dados;
     nodo->Reg_tempA = Reg_tempA;
     nodo->Reg_tempB = Reg_tempB;
+    nodo->estado_atual = estadoAtual;
+    nodo->etapa = etapa;
+    nodo->instr = instrucao;
+    nodo->funct = funct;
+
+    nodo->metricas.contclock = metricas.contclock;
+    nodo->metricas.contInst = metricas.contInst;
+    nodo->metricas.contInstReg = metricas.contInstReg;
+    nodo->metricas.contInstImm = metricas.contInstImm;
+    nodo->metricas.contInstJump = metricas.contInstJump;
+
     nodo->ant = descritor->topo;
     descritor->topo = nodo;
 
@@ -1240,7 +1295,7 @@ void adicionarStepPilha (descritorPilha *descritor, int registradores[8], char R
     return;
 }
 
-void voltarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int *pc, int *Reg_tempA, int *Reg_tempB, int *Reg_dados, int *Reg_aluOUT) {
+void voltarStepPilha (descritorPilha *descritor, int registradores[8], char RegIR[17], int *pc, int *Reg_tempA, int *Reg_tempB, int *Reg_dados, int *Reg_aluOUT, metricas *metricas, int *etapa, int *estadoAtual, instrucao *instrucao, int *funct) {
     nodoPilha *nodo = descritor->topo;
     memcpy(memu, nodo->memu, sizeof(nodo->memu));
     memcpy(registradores, nodo->registradores, sizeof(nodo->registradores));
@@ -1250,6 +1305,17 @@ void voltarStepPilha (descritorPilha *descritor, int registradores[8], char RegI
     *Reg_dados = nodo->Reg_dados;
     *Reg_tempA = nodo->Reg_tempA;
     *Reg_tempB = nodo->Reg_tempB;
+    *estadoAtual = nodo->estado_atual;
+    *etapa = nodo->etapa;
+    *instrucao = nodo->instr;
+    *funct = nodo->funct;
+
+    metricas->contclock = nodo->metricas.contclock;
+    metricas->contInst = nodo->metricas.contInst;
+    metricas->contInstReg = nodo->metricas.contInstReg;
+    metricas->contInstImm = nodo->metricas.contInstImm;
+    metricas->contInstJump = nodo->metricas.contInstJump;
+    
     descritor->topo = nodo->ant;
     free(nodo);
 }
