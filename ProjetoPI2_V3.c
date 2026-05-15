@@ -132,6 +132,7 @@ void limparBuffer ();
 void resetar(int *pc, int *estado_atual, int *etapa, char memu[256][17], int registradores[8]);
 
 void saidamem(char memu[256][17]);
+void diagrama(int mpr, int a, int b, int ulaout);
 
 
 int main() {
@@ -186,6 +187,7 @@ int main() {
                 printf("\nEstado prpximo:%d",estado_atual);
                 printf("\nEstagio proximo:%d",etapa);
                 printf("\nAtual valor pc:%d",pc);
+                diagrama(Reg_dados, Reg_tempA, Reg_tempB, Reg_aluOUT);
                 
                 break;
             case 2:
@@ -198,6 +200,7 @@ int main() {
                 printf("\nproximo estado:%d",estado_atual);
                 printf("\nVALOR DO REGISTRADOR SAIDA ULA:%d",Reg_aluOUT);
                 printf("\nEstagio proximo:%d",etapa);
+                diagrama(Reg_dados, Reg_tempA, Reg_tempB, Reg_aluOUT);
                 break;
 
             case 3:
@@ -207,18 +210,21 @@ int main() {
                 terceiro_estagio_multiciclo(&estado_atual,&etapa,Reg_tempA,Reg_tempB,&Reg_aluOUT,i.imm,i.addr,&pc,i.opcode, funct, &metricas);
                 printf("\nValor atual do pc:%d",pc);
                 printf("\nValor do registrador ula saida:%d",Reg_aluOUT);
+                diagrama(Reg_dados, Reg_tempA, Reg_tempB, Reg_aluOUT);
                 break;
             case 4:
                 push(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
                 printf("\nEstagio %d multiciclo",etapa);
                 printf("\nEstado:%d",estado_atual);
                 quarto_estagio_multiciclo(&estado_atual,&etapa,&Reg_aluOUT,Reg_tempB,Reg_tempA,i.rd,memu,registradores,&Reg_dados,pc,i.imm,i.opcode,i.rt, &metricas,i.funct);
+                diagrama(Reg_dados, Reg_tempA, Reg_tempB, Reg_aluOUT);
                 break;
             case 5:
                 push(&Pilha, registradores, RegIR, pc, Reg_tempA, Reg_tempB, Reg_dados, Reg_aluOUT, metricas, etapa, estado_atual, i, funct);
                 printf("\nEstagio %d multiciclo",etapa);
                 printf("\nEstado:%d",estado_atual);
                 quinto_estagio_multiciclo(&estado_atual,&etapa,Reg_dados,Reg_aluOUT,i.rd,i.rt,registradores, &metricas,i.funct,i.opcode);
+                diagrama(Reg_dados, Reg_tempA, Reg_tempB, Reg_aluOUT);
                 break;
             default:
                 break;
@@ -291,6 +297,40 @@ int main() {
 esvaziarPilha(&Pilha);
 return 0;
 }
+
+void diagrama(int mpr, int a, int b, int ulaout) {
+
+    printf("\n");
+
+    // Parte superior
+    printf(" +-----------+      +------------------+\n");
+    printf(" | Memoria   | ---> | Reg. Instrucao  |\n");
+    printf(" +-----------+      +------------------+\n");
+    printf("        |                     |\n");
+    printf("        v                     |\n");
+    printf(" +------------------+         |\n");
+    printf(" | Mpr %-12d |         |\n", mpr);
+    printf(" +------------------+         |\n");
+    printf("        |                     |\n");
+    printf("        v                     v");
+    imprimir_reg();
+    printf("          |            |\n");
+    printf("          v            v\n");
+    printf("      +--------+ +--------+\n");
+    printf("      | A = %-3d| | B = %-3d|\n", a, b);
+    printf("      +--------+ +--------+\n");
+    printf("           \\\\    //\n");
+    printf("             v   v\n");
+    printf("          +--------+\n");
+    printf("          |  ULA   |\n");
+    printf("          +--------+\n");
+    printf("               |\n");
+    printf("               v\n");
+    printf("      +----------------+\n");
+    printf("      |   ULAOut = %-3d  |\n", ulaout);
+    printf("      +----------------+\n");
+}
+
 
 void carregamem(char memu[256][17]) {
 
@@ -406,7 +446,6 @@ void imprimir_reg() {
 
     // Borda inferior
     printf("  %s└──────────────┴──────────────┘%s\n", CLR_C, RESET);
-    printf("\n");
 }
 
 void imprimir_instrucao(instrucao p) {
