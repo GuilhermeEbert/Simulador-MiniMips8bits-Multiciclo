@@ -301,8 +301,6 @@ return 0;
 void diagrama(int mpr, int a, int b, int ulaout) {
 
     printf("\n");
-
-    // Parte superior
     printf(" +-----------+      +------------------+\n");
     printf(" | Memoria   | ---> | Reg. Instrucao  |\n");
     printf(" +-----------+      +------------------+\n");
