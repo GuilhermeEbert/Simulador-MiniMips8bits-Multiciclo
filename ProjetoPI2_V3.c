@@ -1122,7 +1122,7 @@ void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int 
         saida_mux_Iod=mux_IouD(c,pc,*Reg_aluout);
         printf("\nAQUI1!");
         printf("\nEndereco de leitura:%d",saida_mux_Iod);
-        *MDR=binario_para_decimal(mem[128+saida_mux_Iod]);
+        *MDR=binario_para_decimal(mem[saida_mux_Iod]);
     }
     else if (c.MemWrite)
     {
@@ -1130,7 +1130,7 @@ void quarto_estagio_multiciclo(int *estado_atual,int *etapa,int *Reg_aluout,int 
         printf("\nAQUI2!");
         printf("\nEndereco de escrita:%d",saida_mux_Iod);
         conversao(bin,Reg_tempB);
-        strcpy(mem[128+saida_mux_Iod],bin);
+        strcpy(mem[saida_mux_Iod],bin);
     }
     if (c.RegWrite)
     {
