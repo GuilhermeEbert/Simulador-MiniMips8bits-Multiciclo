@@ -131,6 +131,7 @@ void esvaziarPilha (descritorPilha *descritor);
 void limparBuffer (); 
 void resetar(int *pc, int *estado_atual, int *etapa, char memu[256][17], int registradores[8]);
 
+void saidamem(char memu[256][17]);
 
 
 int main() {
@@ -158,7 +159,7 @@ int main() {
      printf("\n[3] Imprimir memoria");
      printf("\n[4] Imprimir banco de registradores");
      printf("\n[5] Imprimir todo simulador");
-     printf("\n[6] Salvar .asm e .dat");
+     printf("\n[6] Salvar .mem");
      printf("\n[7] Mostrar Estatísticas do programa");
      printf("\n[8] Executar programa(RUN)");
      printf("\n[9] Resetar o programa");
@@ -236,6 +237,8 @@ int main() {
             printf("\nvalor pc:%d",pc);
          break;
          case 6:
+          saidamem(memu);
+          printf("Arquivo de saida.mem gerado!\n");
          break;
          case 7:
          mostrar_metricas(metricas);
@@ -1248,5 +1251,32 @@ void resetar(int *pc, int *estado_atual, int *etapa, char memu[256][17], int reg
       printf("Opção inavlida, memoria mantida!\n");
     break;
   }
+  return;
+}
+
+
+void saidamem(char memu[256][17]){
+  int i, j;
+  FILE*
+  mem = fopen("saida.mem", "w");
+    if (mem == NULL) {
+        printf("Erro ao abrir o arquivo!\n");
+        return;
+    }
+  for(i=0;i<256;i++){
+    if(i==128){
+      fprintf(mem, ".data\n");
+    }
+    for(j=0;j<16;j++){
+      if(memu[i][j] == '\0'){
+        fputc('0', mem);
+      }
+      else{
+        fputc(memu[i][j], mem);
+      }
+    }
+        fputc('\n', mem);
+    }
+  fclose(mem);
   return;
 }
